@@ -1397,8 +1397,6 @@ if (is_ios || is_mac) {
         frameworks = [
           "AVFoundation.framework",
           "CoreGraphics.framework",
-(??)          "CoreMedia.framework",
-(??)          "GLKit.framework",
         ]
 
         if(ios_device_name != "macosx") {
