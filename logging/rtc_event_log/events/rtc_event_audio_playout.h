@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "api/rtc_event_log/rtc_event.h"
+#include "api/units/timestamp.h"
 
 namespace webrtc {
 
@@ -37,6 +38,18 @@ class RtcEventAudioPlayout final : public RtcEvent {
   RtcEventAudioPlayout(const RtcEventAudioPlayout& other);
 
   const uint32_t ssrc_;
+};
+
+struct LoggedAudioPlayoutEvent {
+  LoggedAudioPlayoutEvent() = default;
+  LoggedAudioPlayoutEvent(Timestamp timestamp, uint32_t ssrc)
+      : timestamp(timestamp), ssrc(ssrc) {}
+
+  int64_t log_time_us() const { return timestamp.us(); }
+  int64_t log_time_ms() const { return timestamp.ms(); }
+
+  Timestamp timestamp = Timestamp::MinusInfinity();
+  uint32_t ssrc;
 };
 
 }  // namespace webrtc

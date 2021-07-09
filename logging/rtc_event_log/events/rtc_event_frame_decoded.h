@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "api/rtc_event_log/rtc_event.h"
+#include "api/units/timestamp.h"
 #include "api/video/video_codec_type.h"
 
 namespace webrtc {
@@ -53,6 +54,19 @@ class RtcEventFrameDecoded final : public RtcEvent {
   const int height_;
   const VideoCodecType codec_;
   const uint8_t qp_;
+};
+
+struct LoggedFrameDecoded {
+  int64_t log_time_us() const { return timestamp.us(); }
+  int64_t log_time_ms() const { return timestamp.ms(); }
+
+  Timestamp timestamp = Timestamp::MinusInfinity();
+  int64_t render_time_ms;
+  uint32_t ssrc;
+  int width;
+  int height;
+  VideoCodecType codec;
+  uint8_t qp;
 };
 
 }  // namespace webrtc

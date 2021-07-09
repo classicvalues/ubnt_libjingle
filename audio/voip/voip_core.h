@@ -33,7 +33,6 @@
 #include "modules/audio_device/include/audio_device.h"
 #include "modules/audio_mixer/audio_mixer_impl.h"
 #include "modules/audio_processing/include/audio_processing.h"
-#include "modules/utility/include/process_thread.h"
 #include "rtc_base/synchronization/mutex.h"
 
 namespace webrtc {
@@ -61,8 +60,7 @@ class VoipCore : public VoipEngine,
            rtc::scoped_refptr<AudioDecoderFactory> decoder_factory,
            std::unique_ptr<TaskQueueFactory> task_queue_factory,
            rtc::scoped_refptr<AudioDeviceModule> audio_device_module,
-           rtc::scoped_refptr<AudioProcessing> audio_processing,
-           std::unique_ptr<ProcessThread> process_thread = nullptr);
+           rtc::scoped_refptr<AudioProcessing> audio_processing);
   ~VoipCore() override = default;
 
   // Implements VoipEngine interfaces.
@@ -109,6 +107,8 @@ class VoipCore : public VoipEngine,
   // Implements VoipStatistics interfaces.
   VoipResult GetIngressStatistics(ChannelId channel_id,
                                   IngressStatistics& ingress_stats) override;
+  VoipResult GetChannelStatistics(ChannelId channe_id,
+                                  ChannelStatistics& channel_stats) override;
 
   // Implements VoipVolumeControl interfaces.
   VoipResult SetInputMuted(ChannelId channel_id, bool enable) override;
@@ -157,10 +157,6 @@ class VoipCore : public VoipEngine,
 
   // Synchronization is handled internally by AudioDeviceModule.
   rtc::scoped_refptr<AudioDeviceModule> audio_device_module_;
-
-  // Synchronization is handled internally by ProcessThread.
-  // Must be placed before |channels_| for proper destruction.
-  std::unique_ptr<ProcessThread> process_thread_;
 
   Mutex lock_;
 

@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "api/rtc_event_log/rtc_event.h"
+#include "api/units/timestamp.h"
 
 namespace webrtc {
 
@@ -37,6 +38,19 @@ class RtcEventRouteChange final : public RtcEvent {
 
   const bool connected_;
   const uint32_t overhead_;
+};
+
+struct LoggedRouteChangeEvent {
+  LoggedRouteChangeEvent() = default;
+  LoggedRouteChangeEvent(Timestamp timestamp, bool connected, uint32_t overhead)
+      : timestamp(timestamp), connected(connected), overhead(overhead) {}
+
+  int64_t log_time_us() const { return timestamp.us(); }
+  int64_t log_time_ms() const { return timestamp.ms(); }
+
+  Timestamp timestamp = Timestamp::MinusInfinity();
+  bool connected;
+  uint32_t overhead;
 };
 
 }  // namespace webrtc

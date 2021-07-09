@@ -15,6 +15,7 @@
 #include "absl/types/optional.h"
 #include "api/rtc_event_log/rtc_event.h"
 #include "api/units/data_rate.h"
+#include "api/units/timestamp.h"
 
 namespace webrtc {
 
@@ -32,6 +33,17 @@ class RtcEventRemoteEstimate final : public RtcEvent {
 
   const DataRate link_capacity_lower_;
   const DataRate link_capacity_upper_;
+};
+
+struct LoggedRemoteEstimateEvent {
+  LoggedRemoteEstimateEvent() = default;
+
+  int64_t log_time_us() const { return timestamp.us(); }
+  int64_t log_time_ms() const { return timestamp.ms(); }
+
+  Timestamp timestamp = Timestamp::MinusInfinity();
+  absl::optional<DataRate> link_capacity_lower;
+  absl::optional<DataRate> link_capacity_upper;
 };
 }  // namespace webrtc
 #endif  // LOGGING_RTC_EVENT_LOG_EVENTS_RTC_EVENT_REMOTE_ESTIMATE_H_

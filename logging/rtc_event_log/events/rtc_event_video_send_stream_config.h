@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "api/rtc_event_log/rtc_event.h"
+#include "api/units/timestamp.h"
 #include "logging/rtc_event_log/rtc_stream_config.h"
 
 namespace webrtc {
@@ -39,6 +40,17 @@ class RtcEventVideoSendStreamConfig final : public RtcEvent {
   const std::unique_ptr<const rtclog::StreamConfig> config_;
 };
 
+struct LoggedVideoSendConfig {
+  LoggedVideoSendConfig() = default;
+  LoggedVideoSendConfig(Timestamp timestamp, const rtclog::StreamConfig config)
+      : timestamp(timestamp), config(config) {}
+
+  int64_t log_time_us() const { return timestamp.us(); }
+  int64_t log_time_ms() const { return timestamp.ms(); }
+
+  Timestamp timestamp = Timestamp::MinusInfinity();
+  rtclog::StreamConfig config;
+};
 }  // namespace webrtc
 
 #endif  // LOGGING_RTC_EVENT_LOG_EVENTS_RTC_EVENT_VIDEO_SEND_STREAM_CONFIG_H_

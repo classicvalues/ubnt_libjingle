@@ -33,6 +33,7 @@
 #include "p2p/base/port_interface.h"
 #include "p2p/base/stun_request.h"
 #include "rtc_base/async_packet_socket.h"
+#include "rtc_base/callback_list.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/net_helper.h"
 #include "rtc_base/network.h"
@@ -40,6 +41,7 @@
 #include "rtc_base/rate_tracker.h"
 #include "rtc_base/socket_address.h"
 #include "rtc_base/system/rtc_export.h"
+#include "rtc_base/task_utils/pending_task_safety_flag.h"
 #include "rtc_base/third_party/sigslot/sigslot.h"
 #include "rtc_base/thread.h"
 #include "rtc_base/weak_ptr.h"
@@ -98,14 +100,24 @@ class StunStats {
 // Stats that we can return about a candidate.
 class CandidateStats {
  public:
-  CandidateStats();
-  explicit CandidateStats(Candidate candidate);
-  CandidateStats(const CandidateStats&);
-  ~CandidateStats();
+  CandidateStats() = default;
+  CandidateStats(const CandidateStats&) = default;
+  CandidateStats(CandidateStats&&) = default;
+  CandidateStats(Candidate candidate,
+                 absl::optional<StunStats> stats = absl::nullopt)
+      : candidate_(std::move(candidate)), stun_stats_(std::move(stats)) {}
+  ~CandidateStats() = default;
 
-  Candidate candidate;
+  CandidateStats& operator=(const CandidateStats& other) = default;
+
+  const Candidate& candidate() const { return candidate_; }
+
+  const absl::optional<StunStats>& stun_stats() const { return stun_stats_; }
+
+ private:
+  Candidate candidate_;
   // STUN port stats if this candidate is a STUN candidate.
-  absl::optional<StunStats> stun_stats;
+  absl::optional<StunStats> stun_stats_;
 };
 
 typedef std::vector<CandidateStats> CandidateStatsList;
@@ -160,7 +172,6 @@ typedef std::set<rtc::SocketAddress> ServerAddresses;
 // connections to similar mechanisms of the other client.  Subclasses of this
 // one add support for specific mechanisms like local UDP ports.
 class Port : public PortInterface,
-             public rtc::MessageHandler,
              public sigslot::has_slots<> {
  public:
   // INIT: The state when a port is just created.
@@ -209,17 +220,11 @@ class Port : public PortInterface,
   // Allows a port to be destroyed if no connection is using it.
   void Prune();
 
-  // Call to stop any currently pending operations from running.
-  void CancelPendingTasks();
-
   // The thread on which this port performs its I/O.
   rtc::Thread* thread() { return thread_; }
 
   // The factory used to create the sockets of this port.
   rtc::PacketSocketFactory* socket_factory() const { return factory_; }
-  void set_socket_factory(rtc::PacketSocketFactory* factory) {
-    factory_ = factory;
-  }
 
   // For debugging purposes.
   const std::string& content_name() const { return content_name_; }
@@ -269,6 +274,9 @@ class Port : public PortInterface,
   // connection.
   sigslot::signal1<Port*> SignalPortError;
 
+  void SubscribePortDestroyed(
+      std::function<void(PortInterface*)> callback) override;
+  void SendPortDestroyed(Port* port);
   // Returns a map containing all of the connections of this port, keyed by the
   // remote address.
   typedef std::map<rtc::SocketAddress, Connection*> AddressMap;
@@ -316,8 +324,6 @@ class Port : public PortInterface,
 
   // Called if the port has no connections and is no longer useful.
   void Destroy();
-
-  void OnMessage(rtc::Message* pmsg) override;
 
   // Debugging description of this port
   std::string ToString() const override;
@@ -369,8 +375,6 @@ class Port : public PortInterface,
                                        const rtc::SocketAddress& base_address);
 
  protected:
-  enum { MSG_DESTROY_IF_DEAD = 0, MSG_FIRST_AVAILABLE };
-
   virtual void UpdateNetworkCost();
 
   void set_type(const std::string& type) { type_ = type; }
@@ -437,11 +441,12 @@ class Port : public PortInterface,
   void Construct();
   // Called when one of our connections deletes itself.
   void OnConnectionDestroyed(Connection* conn);
-
   void OnNetworkTypeChanged(const rtc::Network* network);
+  void ScheduleDelayedDestructionIfDead();
+  void DestroyIfDead();
 
   rtc::Thread* const thread_;
-  rtc::PacketSocketFactory* factory_;
+  rtc::PacketSocketFactory* const factory_;
   std::string type_;
   bool send_retransmit_count_attribute_;
   rtc::Network* network_;
@@ -487,6 +492,8 @@ class Port : public PortInterface,
                              bool is_final);
 
   friend class Connection;
+  webrtc::CallbackList<PortInterface*> port_destroyed_callback_list_;
+  webrtc::ScopedTaskSafety safety_;
 };
 
 }  // namespace cricket
